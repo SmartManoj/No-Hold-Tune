@@ -40,14 +40,16 @@ public class CallService extends InCallService {
     }
 
     // Measured on Jio VoLTE (MTK IMS), 2026-11-02:
-    // - unhold sent at once after their UNHELD works; the network takes ~1.5 s to confirm.
+    // - unhold sent at once after their UNHELD looks fine locally (ACTIVE in ~1.5 s), but the two
+    //   re-INVITEs collide: their side stayed on hold (our audio left receive-only, seen on a real
+    //   call). So unhold waits SETTLE_MS too.
     // - hold sent at once after their HELD always fails (CALL_HOLD_FAILED ~0.3 s later, not
     //   forwarded to companion apps). Delay probe, their HELD -> our SET_HOLD: 0.3 s -> 2.2 s,
-    //   0.6 s -> 1.5 s, 0.9 s -> 1.8 s, 1.2 s -> 2.2 s; so 0.6 s.
+    //   0.6 s -> 1.5 s, 0.9 s -> 1.8 s, 1.2 s -> 2.2 s; so 0.6 s, used for both hold and unhold.
     // - a second request while the first is still in flight is harmful: unhold on an already
     //   active call becomes a Telecom "swap" and re-holds it. So re-check only after VERIFY_MS,
     //   which is longer than any confirmation seen.
-    private static final long HOLD_DELAY_MS = 600, VERIFY_MS = 3000;
+    private static final long SETTLE_MS = 600, VERIFY_MS = 3000;
     private static final int MAX_TRIES = 4;
     private final Handler h = new Handler(Looper.getMainLooper());
     private volatile boolean remoteHeld;
@@ -87,7 +89,7 @@ public class CallService extends InCallService {
         stop();
         target = hold;
         since = System.currentTimeMillis();
-        if (hold) h.postDelayed(() -> drive(call), HOLD_DELAY_MS); else drive(call);
+        h.postDelayed(() -> drive(call), SETTLE_MS); // let their re-INVITE finish first
     }
 
     private void stop() {
