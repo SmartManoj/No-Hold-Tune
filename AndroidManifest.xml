@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.smart.noholdtone"
-    android:versionCode="4"
-    android:versionName="4.0">
+    android:versionCode="6"
+    android:versionName="4.2">
 
     <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
 
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- signature|appop; Telecom only binds non-UI InCallServices holding it. Granted by the
          COMPANION_DEVICE_WATCH role after pairing in the app (or: adb shell appops set
          com.smart.noholdtone MANAGE_ONGOING_CALLS allow) -->

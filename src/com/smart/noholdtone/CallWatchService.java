@@ -1,8 +1,5 @@
 package com.smart.noholdtone;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -58,14 +55,11 @@ public class CallWatchService extends InCallService {
             if (REMOTELY_HELD.equals(event)) {
                 remoteHeld = true;
                 log("they put you on hold");
-                alert("They put you on hold");
                 if (autoHold()) start(call, true);
             } else if (REMOTELY_UNHELD.equals(event)) {
                 remoteHeld = false;
                 log("they're back");
-                boolean holding = call.getDetails().getState() == Call.STATE_HOLDING;
-                alert(holding ? "They're back, resuming your call" : "They're back");
-                if (holding) start(call, false);
+                if (call.getDetails().getState() == Call.STATE_HOLDING) start(call, false);
             }
         }
 
@@ -102,7 +96,6 @@ public class CallWatchService extends InCallService {
         if (state != (hold ? Call.STATE_ACTIVE : Call.STATE_HOLDING)) { stop(); return; } // ended, dialing, etc.
         if (++tries > MAX_TRIES) {
             log("gave up " + (hold ? "holding" : "resuming"));
-            alert("Couldn't " + (hold ? "hold" : "resume") + " your call, do it yourself");
             stop();
             return;
         }
@@ -110,11 +103,6 @@ public class CallWatchService extends InCallService {
         h.postDelayed(() -> drive(call), VERIFY_MS);
     }
 
-    @Override public void onCreate() {
-        super.onCreate();
-        getSystemService(NotificationManager.class).createNotificationChannel(
-                new NotificationChannel("hold", "Hold events", NotificationManager.IMPORTANCE_HIGH));
-    }
 
     @Override public void onCallAdded(Call call) {
         bound = true;
@@ -144,13 +132,4 @@ public class CallWatchService extends InCallService {
         return getSharedPreferences("p", MODE_PRIVATE).getBoolean("auto_hold", true);
     }
 
-    private void alert(String msg) {
-        Notification n = new Notification.Builder(this, "hold")
-                .setSmallIcon(android.R.drawable.sym_action_call)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(msg)
-                .setAutoCancel(true)
-                .build();
-        getSystemService(NotificationManager.class).notify(1, n);
-    }
 }
