@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.smart.noholdtone"
-    android:versionCode="7"
-    android:versionName="5.1-play">
+    android:versionCode="9"
+    android:versionName="5.3-play">
 
     <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="36" />
 
@@ -13,7 +13,8 @@
 
     <application
         android:label="@string/app_name"
-        android:icon="@android:drawable/sym_action_call">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher">
 
         <!-- Dial pad; DIAL filters (with and without tel:) are required for the DIALER role -->
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
