@@ -1,0 +1,154 @@
+package com.smart.noholdtone;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.telecom.Call;
+import android.telecom.InCallService;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
+import java.util.Date;
+import java.util.Locale;
+
+/**
+ * Non-UI InCallService. Telecom binds it once the MANAGE_ONGOING_CALLS app-op is allowed (adb, once;
+ * survives reboots). When the other side holds, we hold too, so their hold tune isn't heard; when
+ * they take us off hold while we are holding, we unhold.
+ */
+public class CallWatchService extends InCallService {
+    static volatile boolean bound;
+    static final ArrayDeque<String> LOG = new ArrayDeque<>();
+    // android.telecom.Connection.EVENT_CALL_REMOTELY_(UN)HELD are @hide; Telecom forwards them verbatim.
+    private static final String REMOTELY_HELD = "android.telecom.event.CALL_REMOTELY_HELD";
+    private static final String REMOTELY_UNHELD = "android.telecom.event.CALL_REMOTELY_UNHELD";
+
+    static void log(String s) {
+        String t = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+        synchronized (LOG) {
+            LOG.addFirst(t + "  " + s);
+            while (LOG.size() > 60) LOG.removeLast();
+        }
+        android.util.Log.i("NoHoldTune", s);
+    }
+
+    // Measured on Jio VoLTE (MTK IMS), 2026-11-02:
+    // - unhold sent at once after their UNHELD works; the network takes ~1.5 s to confirm.
+    // - hold sent at once after their HELD always fails (CALL_HOLD_FAILED ~0.3 s later, not
+    //   forwarded to companion apps). Delay probe, their HELD -> our SET_HOLD: 0.3 s -> 2.2 s,
+    //   0.6 s -> 1.5 s, 0.9 s -> 1.8 s, 1.2 s -> 2.2 s; so 0.6 s.
+    // - a second request while the first is still in flight is harmful: unhold on an already
+    //   active call becomes a Telecom "swap" and re-holds it. So re-check only after VERIFY_MS,
+    //   which is longer than any confirmation seen.
+    private static final long HOLD_DELAY_MS = 600, VERIFY_MS = 3000;
+    private static final int MAX_TRIES = 4;
+    private final Handler h = new Handler(Looper.getMainLooper());
+    private volatile boolean remoteHeld;
+    private Boolean target; // side we're driving our call to: true = hold, false = active, null = idle
+    private int tries;
+    private long since;     // when the other side's event arrived
+
+    private final Call.Callback callback = new Call.Callback() {
+        @Override public void onConnectionEvent(Call call, String event, Bundle extras) {
+            if (REMOTELY_HELD.equals(event)) {
+                remoteHeld = true;
+                log("they put you on hold");
+                alert("They put you on hold");
+                if (autoHold()) start(call, true);
+            } else if (REMOTELY_UNHELD.equals(event)) {
+                remoteHeld = false;
+                log("they're back");
+                boolean holding = call.getDetails().getState() == Call.STATE_HOLDING;
+                alert(holding ? "They're back, resuming your call" : "They're back");
+                if (holding) start(call, false);
+            }
+        }
+
+        @Override public void onStateChanged(Call call, int state) {
+            log("call " + stateName(state));
+            if (target != null && state == (target ? Call.STATE_HOLDING : Call.STATE_ACTIVE)) {
+                log((target ? "your side is on hold" : "your side resumed")
+                        + " (" + (System.currentTimeMillis() - since) + " ms after their change, " + tries + " tries)");
+                stop();
+            }
+        }
+    };
+
+    private void start(Call call, boolean hold) {
+        stop();
+        target = hold;
+        since = System.currentTimeMillis();
+        if (hold) h.postDelayed(() -> drive(call), HOLD_DELAY_MS); else drive(call);
+    }
+
+    private void stop() {
+        h.removeCallbacksAndMessages(null);
+        target = null;
+        tries = 0;
+    }
+
+    /** One hold/unhold attempt toward {@link #target}, as long as the other side's state still calls for it. */
+    private void drive(Call call) {
+        if (target == null) return;
+        boolean hold = target;
+        if (remoteHeld != hold) { stop(); return; } // they changed their mind meanwhile
+        int state = call.getDetails().getState();
+        if (state == (hold ? Call.STATE_HOLDING : Call.STATE_ACTIVE)) { stop(); return; }
+        if (state != (hold ? Call.STATE_ACTIVE : Call.STATE_HOLDING)) { stop(); return; } // ended, dialing, etc.
+        if (++tries > MAX_TRIES) {
+            log("gave up " + (hold ? "holding" : "resuming"));
+            alert("Couldn't " + (hold ? "hold" : "resume") + " your call, do it yourself");
+            stop();
+            return;
+        }
+        if (hold) call.hold(); else call.unhold();
+        h.postDelayed(() -> drive(call), VERIFY_MS);
+    }
+
+    @Override public void onCreate() {
+        super.onCreate();
+        getSystemService(NotificationManager.class).createNotificationChannel(
+                new NotificationChannel("hold", "Hold events", NotificationManager.IMPORTANCE_HIGH));
+    }
+
+    @Override public void onCallAdded(Call call) {
+        bound = true;
+        log("watching call (" + stateName(call.getDetails().getState()) + ")");
+        remoteHeld = false;
+        call.registerCallback(callback);
+    }
+
+    @Override public void onCallRemoved(Call call) {
+        stop();
+        call.unregisterCallback(callback);
+        log("call removed");
+    }
+
+    private static String stateName(int s) { // Call.stateToString is @hide
+        switch (s) {
+            case Call.STATE_RINGING: return "ringing";
+            case Call.STATE_DIALING: return "dialing";
+            case Call.STATE_ACTIVE: return "active";
+            case Call.STATE_HOLDING: return "on hold";
+            case Call.STATE_DISCONNECTED: return "ended";
+            default: return "state " + s;
+        }
+    }
+
+    private boolean autoHold() {
+        return getSharedPreferences("p", MODE_PRIVATE).getBoolean("auto_hold", true);
+    }
+
+    private void alert(String msg) {
+        Notification n = new Notification.Builder(this, "hold")
+                .setSmallIcon(android.R.drawable.sym_action_call)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(msg)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(1, n);
+    }
+}
