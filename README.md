@@ -14,7 +14,7 @@ Android 13+, VoLTE calls.
 
 Google Play only lets the default phone app handle calls, so this variant is a small dialer: a dial pad
 and its own in-call screen (Answer, End, Hold, Mute, Speaker, Keypad). It needs no restricted permissions
-(only notifications, CALL_PHONE and full-screen intents).
+(only notifications, CALL_PHONE and full-screen intents). Privacy policy: https://www.smartmanoj.com/no-hold-tune-privacy
 
 The `main` branch keeps the sideload variant, which works next to any dialer (e.g. Truecaller) by pairing
 as a watch companion — not allowed on Play.

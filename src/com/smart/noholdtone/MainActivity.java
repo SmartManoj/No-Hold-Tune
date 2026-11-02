@@ -21,6 +21,7 @@ import android.widget.TextView;
 
 /** Setup (become the default phone app), a dial pad (needed for the DIALER role), and the event log. */
 public class MainActivity extends Activity {
+    static final String PRIVACY_URL = "https://www.smartmanoj.com/no-hold-tune-privacy";
     private TextView checks, log;
     private Button makeDefault;
     private EditText number;
@@ -76,6 +77,13 @@ public class MainActivity extends Activity {
         log.setTypeface(Typeface.MONOSPACE);
         log.setTextSize(12);
         col.addView(log);
+
+        TextView privacy = new TextView(this); // Play requires an in-app privacy policy link
+        privacy.setText("Privacy policy");
+        privacy.setTextColor(0xFF1E88E5);
+        privacy.setPadding(0, pad, 0, pad);
+        privacy.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL))));
+        col.addView(privacy);
 
         ScrollView sv = new ScrollView(this);
         sv.addView(col);
