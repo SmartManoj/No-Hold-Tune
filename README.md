@@ -21,7 +21,7 @@ as a watch companion — not allowed on Play.
 
 ## How it works
 
-A non-UI `InCallService` receives `android.telecom.event.CALL_REMOTELY_HELD` / `CALL_REMOTELY_UNHELD`
+The `InCallService` (the dialer's own, on this branch) receives `android.telecom.event.CALL_REMOTELY_HELD` / `CALL_REMOTELY_UNHELD`
 connection events and calls `Call.hold()` / `Call.unhold()`.
 
 Timing, measured on Jio VoLTE:
