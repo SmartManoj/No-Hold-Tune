@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 SDK="$LOCALAPPDATA/Android/Sdk"
 BT="$SDK/build-tools/35.0.0"
-JAR="$SDK/platforms/android-35/android.jar"
+JAR="$SDK/platforms/android-36/android.jar"
 rm -rf build && mkdir -p build/gen build/classes build/dex
 
 "$BT/aapt2.exe" compile --dir res -o build/res.zip

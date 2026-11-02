@@ -79,6 +79,7 @@ public class MainActivity extends Activity {
 
         ScrollView sv = new ScrollView(this);
         sv.addView(col);
+        Insets.apply(sv);
         setContentView(sv);
         fillFromIntent(getIntent());
     }

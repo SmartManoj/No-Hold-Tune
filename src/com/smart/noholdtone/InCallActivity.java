@@ -112,6 +112,7 @@ public class InCallActivity extends Activity {
         end.setTextColor(0xFFFFFFFF);
         who.setTypeface(Typeface.DEFAULT_BOLD);
 
+        Insets.apply(col);
         setContentView(col);
     }
 

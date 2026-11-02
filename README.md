@@ -38,4 +38,8 @@ A second request while one is in flight is harmful (unhold on an already-active 
 ## Build
 
 No Gradle: `bash build.sh` (aapt2 → javac → d8 → zipalign → apksigner with the debug keystore) → `build/NoHoldTune.apk`.
-Needs the Android SDK (build-tools 35, platform 33) and a JDK.
+Needs the Android SDK (build-tools 35, platform 36) and a JDK.
+
+Play upload (App Bundle, target API 36 as Play requires since 2026-08-31): after `build.sh`, run
+`KS=upload.jks KS_ALIAS=upload KS_PASS=... bash bundle.sh` → `build/NoHoldTune.aab`
+(uses [bundletool](https://github.com/google/bundletool); without `KS` it signs with the debug key, which Play rejects).
