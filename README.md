@@ -5,20 +5,19 @@ Android app that spares you the other person's hold tune.
 - **They put you on hold** → your side goes on hold too, so their hold tune doesn't play to you.
 - **They come back** → your side resumes automatically (~1.5 s, the network's own confirmation time).
 
-Works with any dialer (tested with Truecaller as the in-call UI) on a VoLTE call, Android 13+.
+Android 13+, VoLTE calls.
 
-## Setup (no adb)
+## Setup (`play-store` branch)
 
 1. Install `NoHoldTune.apk`.
-2. Open the app → **Pair (one-time setup)** → pick any Bluetooth device in the list (earphones, laptop…).
-3. Scroll the permission list to the end → **Allow**.
+2. Open the app → **Set as default phone app**.
 
-Why pairing: Android only lets non-dialer apps follow calls if they hold `MANAGE_ONGOING_CALLS`, which the
-system grants to watch-companion apps (`COMPANION_DEVICE_WATCH` role). The paired device is just the key;
-it doesn't need to be connected. The role also grants SMS / contacts / call-log access as a bundle — the app
-doesn't use them.
+Google Play only lets the default phone app handle calls, so this variant is a small dialer: a dial pad
+and its own in-call screen (Answer, End, Hold, Mute, Speaker, Keypad). It needs no restricted permissions
+(only notifications, CALL_PHONE and full-screen intents).
 
-Alternative with adb: `adb shell appops set com.smart.noholdtone MANAGE_ONGOING_CALLS allow`
+The `main` branch keeps the sideload variant, which works next to any dialer (e.g. Truecaller) by pairing
+as a watch companion — not allowed on Play.
 
 ## How it works
 
