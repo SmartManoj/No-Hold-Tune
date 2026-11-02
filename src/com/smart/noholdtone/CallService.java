@@ -62,14 +62,11 @@ public class CallService extends InCallService {
             if (REMOTELY_HELD.equals(event)) {
                 remoteHeld = true;
                 log("they put you on hold");
-                alert("They put you on hold");
                 if (autoHold()) start(call, true);
             } else if (REMOTELY_UNHELD.equals(event)) {
                 remoteHeld = false;
                 log("they're back");
-                boolean holding = call.getDetails().getState() == Call.STATE_HOLDING;
-                alert(holding ? "They're back, resuming your call" : "They're back");
-                if (holding) start(call, false);
+                if (call.getDetails().getState() == Call.STATE_HOLDING) start(call, false);
             }
         }
 
@@ -108,7 +105,6 @@ public class CallService extends InCallService {
         if (state != (hold ? Call.STATE_ACTIVE : Call.STATE_HOLDING)) { stop(); return; } // ended, dialing, etc.
         if (++tries > MAX_TRIES) {
             log("gave up " + (hold ? "holding" : "resuming"));
-            alert("Couldn't " + (hold ? "hold" : "resume") + " your call, do it yourself");
             stop();
             return;
         }
@@ -120,7 +116,6 @@ public class CallService extends InCallService {
         super.onCreate();
         instance = this;
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel("hold", "Hold events", NotificationManager.IMPORTANCE_HIGH));
         nm.createNotificationChannel(new NotificationChannel("call", "Calls", NotificationManager.IMPORTANCE_HIGH));
     }
 
@@ -191,13 +186,4 @@ public class CallService extends InCallService {
         return getSharedPreferences("p", MODE_PRIVATE).getBoolean("auto_hold", true);
     }
 
-    private void alert(String msg) {
-        Notification n = new Notification.Builder(this, "hold")
-                .setSmallIcon(android.R.drawable.sym_action_call)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(msg)
-                .setAutoCancel(true)
-                .build();
-        getSystemService(NotificationManager.class).notify(1, n);
-    }
 }
